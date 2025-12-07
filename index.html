@@ -4,7 +4,8 @@
   <meta charset="utf-8">
   <title>TrueVault – USDT Yield Vault</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js"></script>
+  <!-- This line loads ethers.js correctly -->
+  <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js" type="text/javascript"></script>
   <style>
     body {font-family:Arial;background:#000;color:#0f0;text-align:center;padding:50px;}
     h1 {font-size:3em;}
@@ -38,6 +39,7 @@
   <script>
     const VAULT = "0x033B6dBaB9c178F94725571e71215Ba078cD5dC4";
     const USDT = "0x55d398326f99059fF775485246999027B3197955";
+
     let signer = null;
 
     document.getElementById('connectBtn').onclick = async () => {
@@ -54,13 +56,16 @@
         document.getElementById('depositBtn').disabled = false;
         document.getElementById('status').textContent = "Connected! Enter amount and deposit.";
       } catch (e) {
-        document.getElementById('status').textContent = "Error: " + e.message;
+        document.getElementById('status').textContent = "Connection failed: " + e.message;
       }
     };
 
     document.getElementById('depositBtn').onclick = async () => {
       const amt = document.getElementById('amount').value;
-      if (!amt || !signer) return;
+      if (!amt || !signer) {
+        document.getElementById('status').textContent = "Enter amount and connect wallet first.";
+        return;
+      }
       const value = ethers.utils.parseUnits(amt, 18);
       try {
         document.getElementById('status').textContent = "Approving USDT...";
