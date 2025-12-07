@@ -11,7 +11,7 @@
     button {background:#0f0;color:#000;padding:15px 30px;font-size:18px;border:none;border-radius:8px;cursor:pointer;margin:10px;}
     button:hover {background:#0c0;}
     input {padding:10px;font-size:16px;width:200px;margin:10px;}
-    #status {margin:20px;font-size:18px;}
+    #status {margin:20px;font-size:18px;min-height:24px;}
   </style>
 </head>
 <body>
@@ -21,61 +21,139 @@
   <hr>
 
   <button id="connectBtn">Connect Wallet</button>
+  <p id="status"></p>
 
   <div id="depositSection" style="display:none;">
     <p>Connected: <span id="address"></span></p>
-    <input id="amount" type="number" placeholder="USDT Amount (e.g. 10)" />
+    <input id="amount" type="number" step="0.000001" min="0" placeholder="USDT Amount (e.g. 10)" />
     <button id="depositBtn">Deposit USDT</button>
-    <p id="status"></p>
   </div>
 
   <hr>
-  <p>TVLT Token: <a href="https://bscscan.com/token/0x119402f451537b0EE0e4340a5fF8b4332e05407b">0x1194...407b</a></p>
-  <p>USDT Vault: <a href="https://bscscan.com/address/0x033B6dBaB9c178F94725571e71215Ba078cD5dC4">0x033B...5dC4</a></p>
-  <p>Timelock: <a href="https://bscscan.com/address/0xC8B1A3641e0fE5DaB8F5460D00F4E188547528dB">0xC8B1...528dB</a></p>
-  <p>Airdrop tool: <a href="https://distributepro.truevault.finance">DistributePro</a></p>
+  <p>TVLT Token: <a href="https://bscscan.com/token/0x119402f451537b0EE0e4340a5fF8b4332e05407b" target="_blank">0x1194...407b</a></p>
+  <p>USDT Vault: <a href="https://bscscan.com/address/0x033B6dBaB9c178F94725571e71215Ba078cD5dC4" target="_blank">0x033B...5dC4</a></p>
+  <p>Timelock: <a href="https://bscscan.com/address/0xC8B1A3641e0fE5DaB8F5460D00F4E188547528dB" target="_blank">0xC8B1...528dB</a></p>
+  <p>Airdrop tool: <a href="https://distributepro.truevault.finance" target="_blank">DistributePro</a></p>
 
   <script>
     const VAULT = "0x033B6dBaB9c178F94725571e71215Ba078cD5dC4";
-    const USDT = "0x55d398326f99059fF775485246999027B3197955";
+    const USDT  = "0x55d398326f99059fF775485246999027B3197955";
+    const BSC_CHAIN_ID = "0x38"; // 56 in hex
+
+    let provider = null;
     let signer = null;
 
-    document.getElementById('connectBtn').onclick = async () => {
+    const statusEl  = document.getElementById('status');
+    const connectBtn = document.getElementById('connectBtn');
+    const depositBtn = document.getElementById('depositBtn');
+    const depositSection = document.getElementById('depositSection');
+
+    function setStatus(msg) {
+      statusEl.textContent = msg || "";
+      console.log(msg);
+    }
+
+    async function ensureBscNetwork() {
+      const currentChainId = await provider.send("eth_chainId", []);
+      if (currentChainId !== BSC_CHAIN_ID) {
+        try {
+          await window.ethereum.request({
+            method: "wallet_switchEthereumChain",
+            params: [{ chainId: BSC_CHAIN_ID }]
+          });
+          setStatus("Switched to BSC. You can deposit now.");
+        } catch (err) {
+          setStatus("Please switch MetaMask to BSC mainnet (chainId 56).");
+          throw err;
+        }
+      }
+    }
+
+    connectBtn.onclick = async () => {
       if (!window.ethereum) {
-        document.getElementById('status').textContent = "MetaMask not found!";
+        setStatus("MetaMask not found. Please install MetaMask or use a Web3-enabled browser.");
         return;
       }
       try {
+        setStatus("Connecting wallet...");
         await window.ethereum.request({ method: 'eth_requestAccounts' });
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        provider = new ethers.providers.Web3Provider(window.ethereum);
         signer = provider.getSigner();
+
+        await ensureBscNetwork();
+
         const addr = await signer.getAddress();
-        document.getElementById('address').textContent = addr.slice(0,6)+'...'+addr.slice(-4);
-        document.getElementById('depositSection').style.display = 'block';
-        document.getElementById('status').textContent = "Connected! Enter amount and click Deposit.";
+        document.getElementById('address').textContent = addr.slice(0, 6) + '...' + addr.slice(-4);
+        depositSection.style.display = 'block';
+        setStatus("Connected! Enter amount and click Deposit.");
       } catch (e) {
-        document.getElementById('status').textContent = "Error: " + e.message;
+        console.error(e);
+        setStatus("Error connecting: " + (e.message || e));
       }
     };
 
-    document.getElementById('depositBtn').onclick = async () => {
-      const amt = document.getElementById('amount').value;
-      if (!amt || !signer) return;
-      const value = ethers.utils.parseUnits(amt, 18);
+    depositBtn.onclick = async () => {
+      if (!signer) {
+        setStatus("Please connect your wallet first.");
+        return;
+      }
+
+      const rawAmt = document.getElementById('amount').value;
+      if (!rawAmt || Number(rawAmt) <= 0) {
+        setStatus("Enter a valid USDT amount greater than 0.");
+        return;
+      }
+
+      let value;
       try {
-        document.getElementById('status').textContent = "Approving USDT...";
-        const usdt = new ethers.Contract(USDT, ["function approve(address,uint256) returns(bool)"], signer);
-        await (await usdt.approve(VAULT, value)).wait();
-
-        document.getElementById('status').textContent = "Depositing...";
-        const vault = new ethers.Contract(VAULT, ["function deposit(uint256)"], signer);
-        await (await vault.deposit(value)).wait();
-
-        document.getElementById('status').textContent = "Deposited! Check MetaMask for tvUSDT shares.";
+        // BSC USDT has 18 decimals
+        value = ethers.utils.parseUnits(rawAmt.toString(), 18);
       } catch (e) {
-        document.getElementById('status').textContent = "Error: " + e.message;
+        setStatus("Invalid amount format.");
+        return;
+      }
+
+      try {
+        depositBtn.disabled = true;
+        connectBtn.disabled = true;
+
+        setStatus("Approving USDT...");
+        const usdt = new ethers.Contract(
+          USDT,
+          ["function approve(address spender, uint256 amount) external returns (bool)"],
+          signer
+        );
+        const approveTx = await usdt.approve(VAULT, value);
+        await approveTx.wait();
+
+        setStatus("Depositing into vault...");
+        const vault = new ethers.Contract(
+          VAULT,
+          ["function deposit(uint256 amount) external"],
+          signer
+        );
+        const depositTx = await vault.deposit(value);
+        await depositTx.wait();
+
+        setStatus("Deposited! Check your wallet for tvUSDT shares.");
+      } catch (e) {
+        console.error(e);
+        setStatus("Error: " + (e.data?.message || e.message || e));
+      } finally {
+        depositBtn.disabled = false;
+        connectBtn.disabled = false;
       }
     };
+
+    // Optional: react to network/account changes
+    if (window.ethereum) {
+      window.ethereum.on('accountsChanged', () => {
+        window.location.reload();
+      });
+      window.ethereum.on('chainChanged', () => {
+        window.location.reload();
+      });
+    }
   </script>
 </body>
 </html>
