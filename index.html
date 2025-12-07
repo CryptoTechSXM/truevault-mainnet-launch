@@ -16,28 +16,31 @@
 </head>
 <body>
   <h1>TRUEVAULT IS LIVE</h1>
-  <p>USDT Yield Vault – 17–23% APY · Private Beta</p>
+  <p>USDT Yield Vault – 17–23% APY</p>
+  <p>Private Beta – No Liquidity Yet</p>
   <hr>
+
   <button id="connectBtn">Connect Wallet</button>
+
   <div id="depositSection" style="display:none;">
     <p>Connected: <span id="address"></span></p>
     <input id="amount" type="number" placeholder="USDT Amount (e.g. 10)" />
     <button id="depositBtn">Deposit USDT</button>
     <p id="status"></p>
   </div>
+
   <hr>
   <p>TVLT Token: <a href="https://bscscan.com/token/0x119402f451537b0EE0e4340a5fF8b4332e05407b">0x1194...407b</a></p>
   <p>USDT Vault: <a href="https://bscscan.com/address/0x033B6dBaB9c178F94725571e71215Ba078cD5dC4">0x033B...5dC4</a></p>
   <p>Timelock: <a href="https://bscscan.com/address/0xC8B1A3641e0fE5DaB8F5460D00F4E188547528dB">0xC8B1...528dB</a></p>
   <p>Airdrop tool: <a href="https://distributepro.truevault.finance">DistributePro</a></p>
-  <p>truevault.finance DNS updating…</p>
 
   <script>
     const VAULT = "0x033B6dBaB9c178F94725571e71215Ba078cD5dC4";
     const USDT = "0x55d398326f99059fF775485246999027B3197955";
 
     document.getElementById('connectBtn').onclick = async () => {
-      if (!window.ethereum) return alert("MetaMask not found!");
+      if (!window.ethereum) return alert("MetaMask not detected!");
       try {
         await window.ethereum.request({ method: 'eth_requestAccounts' });
         const provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -45,8 +48,10 @@
         const addr = await signer.getAddress();
         document.getElementById('address').textContent = addr.slice(0,6)+'...'+addr.slice(-4);
         document.getElementById('depositSection').style.display = 'block';
-        document.getElementById('status').textContent = "Connected! Enter amount.";
-      } catch (e) { document.getElementById('status').textContent = e.message; }
+        document.getElementById('status').textContent = "Connected! Enter amount and deposit.";
+      } catch (e) {
+        document.getElementById('status').textContent = "Error: " + e.message;
+      }
     };
 
     document.getElementById('depositBtn').onclick = async () => {
@@ -63,7 +68,9 @@
         await (await vault.deposit(value)).wait();
 
         document.getElementById('status').textContent = "Deposited! Check MetaMask for tvUSDT.";
-      } catch (e) { document.getElementById('status').textContent = "Error: " + e.message; }
+      } catch (e) {
+        document.getElementById('status').textContent = "Error: " + e.message;
+      }
     };
   </script>
 </body>
