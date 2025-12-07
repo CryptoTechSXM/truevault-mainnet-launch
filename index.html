@@ -1,14 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8">
   <title>TrueVault – USDT Yield Vault</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial, sans-serif; background: #000; color: #0f0; text-align: center; padding: 50px; }
-    a { color: #0f0; }
-    h1 { font-size: 3em; }
-    ul { list-style: none; }
+    body {font-family:Arial;background:#000;color:#0f0;text-align:center;padding:50px;}
+    a {color:#0f0;}
+    h1 {font-size:3em;}
+    button {background:#0f0;color:#000;padding:15px 30px;font-size:18px;border:none;border-radius:8px;cursor:pointer;margin:20px;}
+    button:hover {background:#0c0;}
   </style>
 </head>
 <body>
@@ -16,13 +17,16 @@
   <p>USDT Yield Vault – 17–23% APY</p>
   <p>Private Beta – No Liquidity Yet</p>
   <hr>
-  <ul>
-    <li>TVLT Token: <a href="https://bscscan.com/token/0x119402f451537b0EE0e4340a5fF8b4332e05407b">0x1194...407b</a></li>
-    <li>USDT Vault: <a href="https://bscscan.com/address/0x033B6dBaB9c178F94725571e71215Ba078cD5dC4">0x033B...5dC4</a></li>
-    <li>Timelock: <a href="https://bscscan.com/address/0xC8B1A3641e0fE5DaB8F5460D00F4E188547528dB">0xC8B1...528dB</a></li>
-  </ul>
+  <p>
+    <a href="https://bscscan.com/token/0x119402f451537b0EE0e4340a5fF8b4332e05407b">TVLT Token: 0x1194...407b</a><br>
+    <a href="https://bscscan.com/address/0x033B6dBaB9c178F94725571e71215Ba078cD5dC4">USDT Vault: 0x033B...5dC4</a><br>
+    <a href="https://bscscan.com/address/0xC8B1A3641e0fE5DaB8F5460D00F4E188547528dB">Timelock: 0xC8B1...528dB</a>
+  </p>
   <hr>
-  <p>Deposit USDT to test the vault – airdrop coming in 24h</p>
+  <p><strong>Deposit USDT to test the vault (real yield starts immediately)</strong></p>
+  <button onclick="window.location.href='https://truevault-mainnet-launch.vercel.app/deposit'">TEST DEPOSIT $10–$100</button>
+  <hr>
+  <p>Airdrop tool (100k TVLT coming): <a href="https://distributepro.truevault.finance">DistributePro →</a></p>
   <p>truevault.finance will be live soon (DNS updating)</p>
 </body>
 </html>
