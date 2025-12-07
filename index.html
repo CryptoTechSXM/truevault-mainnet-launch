@@ -4,13 +4,15 @@
   <meta charset="utf-8">
   <title>TrueVault – USDT Yield Vault</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="https://cdn.ethers.io/lib/ethers-6.7.umd.min.js" type="text/javascript"></script>
   <style>
     body {font-family:Arial;background:#000;color:#0f0;text-align:center;padding:50px;}
+    a {color:#0f0;}
+    h1 {font-size:3em;}
     button {background:#0f0;color:#000;padding:15px 30px;font-size:18px;border:none;border-radius:8px;cursor:pointer;margin:10px;}
     button:hover {background:#0c0;}
+    button:disabled {background:#333;cursor:not-allowed;}
     input {padding:10px;font-size:16px;width:200px;margin:10px;}
-    #status {color: #fff; margin:10px;}
+    #status {margin:20px;font-size:18px;}
   </style>
 </head>
 <body>
@@ -18,61 +20,65 @@
   <p>USDT Yield Vault – 17–23% APY</p>
   <p>Private Beta – No Liquidity Yet</p>
   <hr>
-  <div id="walletSection">
-    <button id="connectBtn">Connect Wallet</button>
-    <div id="depositSection" style="display:none;">
-      <p>Connected: <span id="address"></span></p>
-      <input id="amount" type="number" placeholder="USDT Amount (e.g. 10)" />
-      <button id="depositBtn">Deposit USDT</button>
-      <p id="status"></p>
-    </div>
+  <button id="connectBtn">Connect Wallet</button>
+  <div id="depositSection" style="display:none;">
+    <p>Connected: <span id="address"></span></p>
+    <input id="amount" type="number" placeholder="USDT Amount (e.g. 10)" />
+    <button id="depositBtn">Deposit USDT</button>
+    <p id="status"></p>
   </div>
   <hr>
   <p>TVLT Token: <a href="https://bscscan.com/token/0x119402f451537b0EE0e4340a5fF8b4332e05407b">0x1194...407b</a></p>
   <p>USDT Vault: <a href="https://bscscan.com/address/0x033B6dBaB9c178F94725571e71215Ba078cD5dC4">0x033B...5dC4</a></p>
   <p>Timelock: <a href="https://bscscan.com/address/0xC8B1A3641e0fE5DaB8F5460D00F4E188547528dB">0xC8B1...528dB</a></p>
   <p>Airdrop tool: <a href="https://distributepro.truevault.finance">DistributePro</a></p>
+  <p>truevault.finance will be live soon (DNS updating)</p>
 
   <script>
     const VAULT = "0x033B6dBaB9c178F94725571e71215Ba078cD5dC4";
     const USDT = "0x55d398326f99059fF775485246999027B3197955";
+
     let signer;
 
     document.getElementById('connectBtn').onclick = async () => {
       if (typeof window.ethereum !== 'undefined') {
         try {
-          const provider = new ethers.BrowserProvider(window.ethereum);
-          await provider.send("eth_requestAccounts", []);
-          signer = await provider.getSigner();
+          // Request account access
+          await window.ethereum.request({ method: 'eth_requestAccounts' });
+          // Create provider and signer
+          const provider = new ethers.providers.Web3Provider(window.ethereum);
+          signer = provider.getSigner();
           const address = await signer.getAddress();
           document.getElementById('address').textContent = address.slice(0,6) + '...' + address.slice(-4);
           document.getElementById('depositSection').style.display = 'block';
-          document.getElementById('status').textContent = 'Wallet connected!';
-        } catch (error) {
-          document.getElementById('status').textContent = 'Connection failed: ' + error.message;
+          document.getElementById('status').textContent = 'Connected! Enter amount and deposit.';
+        } catch (e) {
+          document.getElementById('status').textContent = 'Connection failed: ' + e.message;
         }
       } else {
-        document.getElementById('status').textContent = 'MetaMask not found – install it!';
+        document.getElementById('status').textContent = 'MetaMask not detected – install it from metamask.io';
       }
     };
 
     document.getElementById('depositBtn').onclick = async () => {
       const amount = document.getElementById('amount').value;
-      if (!amount || !signer) return;
-      const value = ethers.parseUnits(amount, 18);
-
+      if (!amount || !signer) {
+        document.getElementById('status').textContent = 'Connect wallet first or enter amount.';
+        return;
+      }
+      const value = ethers.utils.parseUnits(amount, 18);
       try {
         document.getElementById('status').textContent = 'Approving USDT...';
         const usdt = new ethers.Contract(USDT, ['function approve(address,uint256) returns(bool)'], signer);
-        await usdt.approve(VAULT, value);
+        await (await usdt.approve(VAULT, value)).wait();
 
         document.getElementById('status').textContent = 'Depositing...';
         const vault = new ethers.Contract(VAULT, ['function deposit(uint256)'], signer);
-        await vault.deposit(value);
+        await (await vault.deposit(value)).wait();
 
-        document.getElementById('status').textContent = 'Deposited! Check MetaMask for tvUSDT.';
-      } catch (error) {
-        document.getElementById('status').textContent = 'Error: ' + error.message;
+        document.getElementById('status').textContent = 'Deposited! Check MetaMask for tvUSDT shares (add token 0x033B6dBaB9c178F94725571e71215Ba078cD5dC4).';
+      } catch (e) {
+        document.getElementById('status').textContent = 'Error: ' + e.message;
       }
     };
   </script>
