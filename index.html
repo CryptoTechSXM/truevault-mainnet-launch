@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <title>TrueVault – USDT Yield Vault</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- This line loads ethers.js correctly -->
-  <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js" type="text/javascript"></script>
+  <!-- Correct ethers.js CDN (this one never fails) -->
+  <script src="https://unpkg.com/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <style>
     body {font-family:Arial;background:#000;color:#0f0;text-align:center;padding:50px;}
     h1 {font-size:3em;}
@@ -44,7 +44,7 @@
 
     document.getElementById('connectBtn').onclick = async () => {
       if (!window.ethereum) {
-        document.getElementById('status').textContent = "MetaMask not found!";
+        document.getElementById('status').textContent = "MetaMask not detected!";
         return;
       }
       try {
@@ -63,7 +63,7 @@
     document.getElementById('depositBtn').onclick = async () => {
       const amt = document.getElementById('amount').value;
       if (!amt || !signer) {
-        document.getElementById('status').textContent = "Enter amount and connect wallet first.";
+        document.getElementById('status').textContent = "Connect wallet and enter amount.";
         return;
       }
       const value = ethers.utils.parseUnits(amt, 18);
@@ -76,7 +76,7 @@
         const vault = new ethers.Contract(VAULT, ["function deposit(uint256)"], signer);
         await (await vault.deposit(value)).wait();
 
-        document.getElementById('status').textContent = "Deposited! Check MetaMask for tvUSDT.";
+        document.getElementById('status').textContent = "Deposited! Check MetaMask for tvUSDT shares.";
       } catch (e) {
         document.getElementById('status').textContent = "Error: " + e.message;
       }
