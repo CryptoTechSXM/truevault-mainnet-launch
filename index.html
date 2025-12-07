@@ -4,12 +4,15 @@
   <meta charset="utf-8">
   <title>TrueVault – USDT Yield Vault</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.jsdelivr.net/npm/@web3modal/ethereum@2.7.1"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@wagmi/core@1.4.1/dist/index.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@wagmi/connectors@3.1.0/dist/index.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.1/dist/ethers.umd.min.js"></script>
   <style>
     body {font-family:Arial;background:#000;color:#0f0;text-align:center;padding:50px;}
-    a {color:#0f0;}
-    h1 {font-size:3em;}
-    button {background:#0f0;color:#000;padding:15px 30px;font-size:18px;border:none;border-radius:8px;cursor:pointer;margin:20px;}
+    button {background:#0f0;color:#000;padding:15px 30px;font-size:18px;border:none;border-radius:8px;cursor:pointer;margin:10px;}
     button:hover {background:#0c0;}
+    input {padding:10px;font-size:16px;width:200px;margin:10px;}
   </style>
 </head>
 <body>
@@ -17,16 +20,65 @@
   <p>USDT Yield Vault – 17–23% APY</p>
   <p>Private Beta – No Liquidity Yet</p>
   <hr>
-  <p>
-    <a href="https://bscscan.com/token/0x119402f451537b0EE0e4340a5fF8b4332e05407b">TVLT Token: 0x1194...407b</a><br>
-    <a href="https://bscscan.com/address/0x033B6dBaB9c178F94725571e71215Ba078cD5dC4">USDT Vault: 0x033B...5dC4</a><br>
-    <a href="https://bscscan.com/address/0xC8B1A3641e0fE5DaB8F5460D00F4E188547528dB">Timelock: 0xC8B1...528dB</a>
-  </p>
+  <div id="app">
+    <button id="connect">Connect Wallet</button>
+    <div id="depositSection" style="display:none;">
+      <p>Connected as <span id="address"></span></p>
+      <input id="amount" type="number" placeholder="USDT Amount (e.g. 10)" />
+      <button id="depositBtn">Deposit USDT</button>
+      <p id="status"></p>
+    </div>
+  </div>
   <hr>
-  <p><strong>Deposit USDT to test the vault (real yield starts immediately)</strong></p>
-  <button onclick="window.location.href='https://truevault-mainnet-launch.vercel.app/deposit'">TEST DEPOSIT $10–$100</button>
-  <hr>
-  <p>Airdrop tool (100k TVLT coming): <a href="https://distributepro.truevault.finance">DistributePro →</a></p>
-  <p>truevault.finance will be live soon (DNS updating)</p>
+  <p>TVLT Token: <a href="https://bscscan.com/token/0x119402f451537b0EE0e4340a5fF8b4332e05407b">0x1194...407b</a></p>
+  <p>USDT Vault: <a href="https://bscscan.com/address/0x033B6dBaB9c178F94725571e71215Ba078cD5dC4">0x033B...5dC4</a></p>
+  <p>Timelock: <a href="https://bscscan.com/address/0xC8B1A3641e0fE5DaB8F5460D00F4E188547528dB">0xC8B1...528dB</a></p>
+  <p>Airdrop tool: <a href="https://distributepro.truevault.finance">DistributePro</a></p>
+
+  <script>
+    const VAULT = "0x033B6dBaB9c178F94725571e71215Ba078cD5dC4";
+    const USDT = "0x55d398326f99059fF775485246999027B3197955";
+    const chainId = 56;
+
+    const { createWeb3Modal, defaultWagmiConfig } = window.Web3Modal;
+    const { createClient, http } = window.wagmiCore;
+    const { walletConnect } = window.wagmiConnectors;
+
+    const projectId = 'YOUR_PROJECT_ID'; // we can skip for now — works without
+    const metadata = { name: 'TrueVault', description: 'USDT Yield Vault', url: 'https://truevault.finance', icons: ['https://truevault.finance/favicon.ico'] };
+
+    const chains = [{ chainId, name: 'BSC', currency: 'BNB', explorerUrl: 'https://bscscan.com', rpcUrl: 'https://bsc-dataseed.binance.org' }];
+    const wagmiConfig = defaultWagmiConfig({ chains, projectId, metadata });
+
+    const modal = createWeb3Modal({ wagmiConfig, projectId, chains });
+
+    document.getElementById('connect').onclick = () => modal.open();
+
+    modal.subscribeEvents(async (event) => {
+      if (event.data.event === 'MODAL_CLOSE') return;
+      const address = await wagmiConfig.getAddress();
+      document.getElementById('address').textContent = address.slice(0,6)+'...'+address.slice(-4);
+      document.getElementById('depositSection').style.display = 'block';
+    });
+
+    document.getElementById('depositBtn').onclick = async () => {
+      const amount = document.getElementById('amount').value;
+      if (!amount) return;
+      const value = ethers.parseUnits(amount, 18);
+
+      const { connector = await wagmiConfig.getConnector();
+      const provider = await connector.getProvider();
+      const signer = await provider.getSigner();
+
+      const usdt = new ethers.Contract(USDT, ['function approve(address,uint256) returns(bool)'], signer);
+      const vault = new ethers.Contract(VAULT, ['function deposit(uint256)'], signer);
+
+      document.getElementById('status').textContent = 'Approving USDT...';
+      await usdt.approve(VAULT, value);
+      document.getElementById('status').textContent = 'Depositing...';
+      await vault.deposit(value);
+      document.getElementById('status').textContent = 'Deposited! Check your wallet for tvUSDT shares';
+    };
+  </script>
 </body>
 </html>
