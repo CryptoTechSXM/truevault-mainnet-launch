@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <title>TrueVault – USDT Yield Vault</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js"></script>
   <style>
     body {font-family:Arial;background:#000;color:#0f0;text-align:center;padding:50px;}
     h1 {font-size:3em;}
     button {background:#0f0;color:#000;padding:15px 30px;font-size:18px;border:none;border-radius:8px;cursor:pointer;margin:10px;}
     button:hover {background:#0c0;}
-    button:disabled {background:#333;cursor:not-allowed;}
     input {padding:10px;font-size:16px;width:200px;margin:10px;}
     #status {margin:20px;font-size:18px;}
   </style>
@@ -39,56 +39,39 @@
     const VAULT = "0x033B6dBaB9c178F94725571e71215Ba078cD5dC4";
     const USDT = "0x55d398326f99059fF775485246999027B3197955";
 
-    let signer;
+    document.getElementById('connectBtn').onclick = async () => {
+      if (!window.ethereum) return alert("MetaMask not found!");
+      try {
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        const signer = provider.getSigner();
+        const addr = await signer.getAddress();
+        document.getElementById('address').textContent = addr.slice(0,6)+'...'+addr.slice(-4);
+        document.getElementById('depositSection').style.display = 'block';
+        document.getElementById('status').textContent = "Connected! Enter amount and deposit.";
+      } catch (e) {
+        document.getElementById('status').textContent = e.message;
+      }
+    };
 
-    document.addEventListener('DOMContentLoaded', () => {
-      const connectBtn = document.getElementById('connectBtn');
-      const depositSection = document.getElementById('depositSection');
-      const depositBtn = document.getElementById('depositBtn');
-      const addressSpan = document.getElementById('address');
-      const amountInput = document.getElementById('amount');
-      const status = document.getElementById('status');
+    document.getElementById('depositBtn').onclick = async () => {
+      const amt = document.getElementById('amount').value;
+      if (!amt) return;
+      const value = ethers.utils.parseUnits(amt, 18);
+      try {
+        document.getElementById('status').textContent = "Approving...";
+        const usdt = new ethers.Contract(USDT, ["function approve(address,uint256) returns(bool)"], signer);
+        await (await usdt.approve(VAULT, value)).wait();
 
-      connectBtn.onclick = async () => {
-        if (typeof window.ethereum === 'undefined') {
-          status.textContent = 'MetaMask not detected – install it from metamask.io';
-          return;
-        }
-        try {
-          await window.ethereum.request({ method: 'eth_requestAccounts' });
-          const provider = new ethers.providers.Web3Provider(window.ethereum);
-          signer = provider.getSigner();
-          const addr = await signer.getAddress();
-          addressSpan.textContent = addr.slice(0,6) + '...' + addr.slice(-4);
-          depositSection.style.display = 'block';
-          status.textContent = 'Connected! Enter amount and deposit.';
-        } catch (e) {
-          status.textContent = 'Connection failed: ' + e.message;
-        }
-      };
+        document.getElementById('status').textContent = "Depositing...";
+        const vault = new ethers.Contract(VAULT, ["function deposit(uint256)"], signer);
+        await (await vault.deposit(value)).wait();
 
-      depositBtn.onclick = async () => {
-        const amt = amountInput.value;
-        if (!amt || !signer) {
-          status.textContent = 'Connect wallet first or enter amount.';
-          return;
-        }
-        const value = ethers.utils.parseUnits(amt, 18);
-        try {
-          status.textContent = 'Approving USDT...';
-          const usdt = new ethers.Contract(USDT, ['function approve(address,uint256) returns(bool)'], signer);
-          await (await usdt.approve(VAULT, value)).wait();
-
-          status.textContent = 'Depositing...';
-          const vault = new ethers.Contract(VAULT, ['function deposit(uint256)'], signer);
-          await (await vault.deposit(value)).wait();
-
-          status.textContent = 'Deposited! Check MetaMask for tvUSDT shares (add token 0x033B6dBaB9c178F94725571e71215Ba078cD5dC4).';
-        } catch (e) {
-          status.textContent = 'Error: ' + e.message;
-        }
-      };
-    });
+        document.getElementById('status').textContent = "Deposited! Check MetaMask for tvUSDT.";
+      } catch (e) {
+        document.getElementById('status').textContent = e.message;
+      }
+    };
   </script>
 </body>
 </html>
